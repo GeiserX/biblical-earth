@@ -1,0 +1,41 @@
+proxy:
+  hide-navbar: true
+  port: 8080
+  #title: AdamApp Proxy
+  logo-url: http://www.openanalytics.eu/sites/www.openanalytics.eu/themes/oa/logo.png
+  favicon-path: favicon.png
+  landing-page: /app/biblical-earth
+  heartbeat-rate: 10000
+  heartbeat-timeout: 60000
+  authentication: simple
+  admin-groups: admins
+  shiny.proxy.kubernetes.internal-networking: true
+  users:
+  - name: sergio
+    password: sergioPass
+    groups: admins
+  - name: raquel
+    password: raquelPass
+    groups: admins
+  - name: user
+    password: user
+    groups: user
+  container-backend: kubernetes
+  kubernetes:
+    internal-networking: true
+    url: http://localhost:8001
+  specs:
+  - id: biblical-earth
+    display-name: Biblical Earth
+    description: Biblical Earth
+    container-image: drumsergio/biblical-earth
+    access-groups: [admins, user]
+    logo-url: file://opt/shinyproxy/favicon.png
+logging:
+  file:
+    /var/log/shinyproxy/shinyproxy.log
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
