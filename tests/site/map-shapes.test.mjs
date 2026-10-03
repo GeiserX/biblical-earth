@@ -209,11 +209,12 @@ function frameAt(page, sel) {
 }
 
 test('framing a shape: a small one zooms in, and at 1440 a big one stays on the map and clear of the legend', async () => {
-  const page = await openMap(DESKTOP, 't=29.5');
+  // The strip raised (linea=grande): at 1440 by 900 the map is 282 px tall, the hardest case.
+  const page = await openMap(DESKTOP, 't=29.5&linea=grande');
   // Genesaret is 5 by 2.5 km: framed by its shape, not by the region zoom of its point (5.5).
   const g = await frameAt(page, { tipo: 'lugar', id: 'genesaret' });
   assert.ok(g.zoom >= 9, `Genesaret framed at zoom ${g.zoom.toFixed(2)}`);
-  // At 1440 by 900 the timeline leaves the map 282 px tall and the legend fills its lower left: Canaán goes to the
+  // With the strip raised at 1440 by 900 the map is 282 px tall and the legend fills its lower left: Canaán goes to the
   // right of the legend, no further out than the zoom of its point.
   await page.evaluate(() => window.__be.setT(-1467.5));
   const c = await frameAt(page, { tipo: 'lugar', id: 'canaan' });

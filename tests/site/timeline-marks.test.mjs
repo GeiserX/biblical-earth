@@ -636,7 +636,8 @@ for (const screen of [DESKTOP, PHONE]) {
 }
 
 test('1440: a selected mark out of view is named at the edge, and its button brings it back without changing the scale or the cursor', async () => {
-  const p = await open(DESKTOP, 't=50.5&v=8');
+  // The strip raised, as it opened at 900 px tall before: the letters lane is in it and the panel scrolls.
+  const p = await open(DESKTOP, 't=50.5&v=8&linea=grande');
   const it = (await hookView(p)).visible.find((x) => x.lane === 'cartas');
   await p.evaluate(({ id }) => { const b = document.querySelector(`#linea-filas .m[data-id="${CSS.escape(id)}"]`); b.scrollIntoView({ block: 'center' }); }, it);
   await frames(p);
@@ -667,8 +668,9 @@ test('1440: a selected mark out of view is named at the edge, and its button bri
   void a;
 });
 
-test('1440: the panel opens tall, the splitter shrinks it and the size survives a reload', async () => {
-  const context = await browser.newContext({ deviceScaleFactor: 1, ...DESKTOP });
+test('1440 × 1100: the panel opens tall, the splitter shrinks it and the size survives a reload; at 900 px tall it opens normal', async () => {
+  // A screen 1000 px tall or more opens the strip tall; a lower one, normal, so the map keeps its room.
+  const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 1440, height: 1100 } });
   const p = await context.newPage();
   p.on('pageerror', (e) => errors.push(`panel pageerror: ${e.message}`));
   await p.goto(`${base}#t=50.5&v=8`);
@@ -692,12 +694,13 @@ test('1440: the panel opens tall, the splitter shrinks it and the size survives 
   await frames(p, 6);
   const h2 = await p.evaluate(() => document.querySelector('#linea').offsetHeight);
   note(`1440 panel: opens at ${h0} px, splitter −200 px → ${h1} px, after a reload ${h2} px; hash «${await p.evaluate(() => location.hash)}»`);
-  assert.ok(Math.abs(h0 - Math.min(900 * 0.62, 600)) <= 2, `opens at ${h0}`);
+  assert.ok(Math.abs(h0 - Math.min(1100 * 0.62, 600)) <= 2, `opens at ${h0}`);
   assert.ok(Math.abs(h1 - (h0 - 200)) <= 4);
   assert.ok(Math.abs(h2 - h1) <= 2);
   await context.close();
-  // On a low screen the strip opens at its normal height, so the map keeps its room; T still raises it.
-  const low = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 1366, height: 768 } });
+  // On a screen 900 px tall the strip opens at its normal height, so the map keeps its room; T still raises it. With
+  // the tall strip a tour opened from the landing had 282 px of map, most of it under the legend and «Mientras tanto».
+  const low = await browser.newContext({ deviceScaleFactor: 1, ...DESKTOP });
   const q = await low.newPage();
   q.on('pageerror', (e) => errors.push(`panel 768 pageerror: ${e.message}`));
   await q.goto(`${base}#t=50.5&v=8`);
@@ -707,7 +710,7 @@ test('1440: the panel opens tall, the splitter shrinks it and the size survives 
   await q.evaluate(() => document.activeElement?.blur());
   await q.keyboard.press('t'); await frames(q, 4);
   const l1 = await q.evaluate(() => document.querySelector('#linea').offsetHeight);
-  note(`1366x768 panel: opens at ${l0} px, T → ${l1} px; hash «${await q.evaluate(() => location.hash)}»`);
+  note(`1440x900 panel: opens at ${l0} px, T → ${l1} px; hash «${await q.evaluate(() => location.hash)}»`);
   assert.ok(l0 <= 260, `opens at ${l0}`);
   assert.ok(l1 > l0 + 100);
   await low.close();
@@ -794,6 +797,133 @@ test('1440: names on bars read in both themes and faint bars carry a border', as
   }
   await p.evaluate(() => document.documentElement.classList.remove('be-reunion'));
   await p.context().close();
+});
+
+/** The colours of every mark the strip draws, by id: the fill and edge of its dot or bar, its name and the lane under
+    it. Computed colours come as rgb() or, for a color-mix(), as color(srgb …) with channels from 0 to 1. */
+const markColours = (p) => p.evaluate(() => {
+  const rgb = (c) => { const n = (c.match(/-?[\d.]+/g) || []).map(Number).slice(0, 3); return c.startsWith('color(') ? n.map((v) => Math.round(v * 255)) : n; };
+  const out = {};
+  for (const b of document.querySelectorAll('#linea-filas .carril:not([hidden]) .m')) {
+    const f = b.querySelector('.m-barra, .m-punto'), s = getComputedStyle(f), lab = b.querySelector('.m-nombre');
+    let el = b.closest('.carril'), fondo;
+    while (el && /rgba\(.*, 0\)$|transparent/.test(fondo = getComputedStyle(el).backgroundColor)) el = el.parentElement;
+    out[b.dataset.id] = { sel: b.dataset.sel, bar: f.classList.contains('m-barra'), hollow: b.matches('.m--hueca'), secular: b.matches('.m--secular'), dim: b.matches('.atenuado'),
+      onBar: lab.classList.contains('en-barra'), name: lab.textContent, fill: rgb(s.backgroundColor), edge: rgb(s.borderTopColor), shadow: s.boxShadow, text: rgb(getComputedStyle(lab).color), lane: rgb(fondo) };
+  }
+  return out;
+});
+const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+function hue([r, g, b]) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (!d) return null;
+  const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+const spread = (c) => Math.max(...c) - Math.min(...c);
+
+test('1440: with an event selected the other marks keep their shape and their colour, washed; releasing gives it all back', async () => {
+  // The owner: with a mark selected, the others lost their colour (white bars, hollow dots). Now a bar keeps its colour
+  // at 45 % toward the background, with its name in ink at 4.5:1 or more, and a dot keeps its circle at 60 %, so the
+  // nearly black ones read grey. When nothing is selected, every mark is at full colour again.
+  const p = await open(DESKTOP, 't=-605.4422&v=40');
+  for (const theme of ['claro', 'reunión']) {
+    await p.evaluate((dark) => document.documentElement.classList.toggle('be-reunion', dark), theme === 'reunión');
+    await frames(p);
+    const full = await markColours(p);
+    const a = await pressMark(p, DESKTOP, 'Babilonia destruye Jerusalén');
+    assert.equal(a.sel, 'evento:destruccion-de-jerusalen-607');
+    assert.equal(await p.evaluate(() => document.querySelector('#linea-filas').classList.contains('sin-foco')), false, `${theme}: nothing is dimmed`);
+    const dimmed = await markColours(p);
+    const dots = [], bars = [], low = [];
+    for (const [id, d] of Object.entries(dimmed)) {
+      const f = full[id];
+      if (!f) continue;
+      if (d.sel === a.sel) { assert.deepEqual([d.fill, d.edge], [f.fill, f.edge], `${theme}: the selected mark changed colour`); continue; }
+      if (!d.dim || d.secular) continue;
+      if (!d.bar && !d.hollow) {
+        // The dot keeps its circle: filled, apart from the lane and lighter than before (toward the background).
+        dots.push(`${d.name} ${f.fill} -> ${d.fill}`);
+        assert.ok(ratio(d.fill, d.lane) >= 1.5, `${theme}: «${d.name}» lost its dot: ${d.fill} on ${d.lane}`);
+        assert.ok(ratio(d.fill, f.lane) < ratio(f.fill, f.lane), `${theme}: «${d.name}» is not washed: ${f.fill} -> ${d.fill}`);
+        if (theme === 'claro' && spread(f.fill) < 40) assert.ok(spread(d.fill) < 30 && lum(d.fill) > 0.12, `${theme}: «${d.name}» was dark and is not grey: ${d.fill}`);
+      }
+      if (d.bar && !d.hollow) {
+        // The bar keeps its hue and loses strength.
+        bars.push(`${d.name} ${f.fill} -> ${d.fill}`);
+        const h0 = hue(f.fill), h1 = hue(d.fill);
+        if (h0 != null && spread(f.fill) >= 30) assert.ok(h1 != null && Math.min(Math.abs(h0 - h1), 360 - Math.abs(h0 - h1)) < 15, `${theme}: «${d.name}» changed hue: ${f.fill} -> ${d.fill}`);
+        assert.ok(ratio(d.fill, f.lane) < ratio(f.fill, f.lane), `${theme}: «${d.name}» is not washed: ${f.fill} -> ${d.fill}`);
+        assert.ok(ratio(d.fill, d.lane) > 1.15, `${theme}: «${d.name}» is the colour of its lane: ${d.fill}`);
+        if (d.onBar && ratio(d.text, d.fill) < 4.5) low.push(`${d.name} ${ratio(d.text, d.fill).toFixed(2)}`);
+      }
+    }
+    note(`1440 ${theme}, one event selected: ${dots.length} dots and ${bars.length} bars dimmed, ${low.length} names under 4.5:1; e.g. ${dots[0]}; ${bars[0]}`);
+    assert.ok(dots.length >= 3 && bars.length >= 2, `${theme}: too few dimmed marks to judge (${dots.length} dots, ${bars.length} bars)`);
+    assert.deepEqual(low, [], `${theme}: names on washed bars under 4.5:1`);
+    // A second click releases the selection, and every mark is back to its full colour.
+    const r = await pressMark(p, DESKTOP, 'Babilonia destruye Jerusalén');
+    assert.equal(r.sel, '');
+    const back = await markColours(p);
+    for (const [id, f] of Object.entries(full)) if (back[id]) assert.deepEqual([back[id].fill, back[id].edge, back[id].text], [f.fill, f.edge, f.text], `${theme}: «${f.name}» did not get its colour back`);
+  }
+  await p.evaluate(() => document.documentElement.classList.remove('be-reunion'));
+  await p.context().close();
+});
+
+test('«Carriles» is a button that looks like one and says what it does; a click, a tap and Enter open the lane chooser', async () => {
+  // The owner: nobody knew that «CARRILES» could be pressed. It is a button with a border and an arrow, an accessible
+  // name that says what it does and aria-expanded, and it fits the lane column in both themes and with «Letra grande».
+  for (const screen of [DESKTOP, PHONE]) {
+    const p = await open(screen, 't=50.5&v=8');
+    const look = () => p.evaluate(() => {
+      const b = document.querySelector('#carriles .carriles-boton'), s = getComputedStyle(b), r = b.getBoundingClientRect();
+      const col = document.querySelector('#carriles').getBoundingClientRect();
+      const menu = document.querySelector('#linea-menu');
+      return { tag: b.tagName, name: b.getAttribute('aria-label'), title: b.title, expanded: b.getAttribute('aria-expanded'), popup: b.getAttribute('aria-haspopup'),
+        border: `${s.borderTopStyle} ${parseFloat(s.borderTopWidth)}`, cursor: s.cursor, icon: !!b.querySelector('svg'),
+        fits: r.left >= col.left - 0.5 && r.right <= col.right + 0.5 && r.top >= col.top - 0.5 && r.bottom <= col.bottom + 0.5, cut: b.scrollWidth > b.clientWidth + 1,
+        open: !!menu && !menu.hidden && /Carriles/.test(menu.textContent) && !!menu.querySelector('[data-fijar]') };
+    });
+    for (const cls of ['', 'be-reunion', 'be-letra-grande', 'be-reunion be-letra-grande']) {
+      await p.evaluate((c) => { const h = document.documentElement; h.classList.remove('be-reunion', 'be-letra-grande'); if (c) h.classList.add(...c.split(' ')); }, cls);
+      await frames(p);
+      const l = await look();
+      note(`${screen.name} «Carriles» ${cls || 'claro'}: ${l.tag}, «${l.name}», border ${l.border}, ${l.fits ? 'inside' : 'outside'} its column${l.cut ? ', cut' : ''}`);
+      assert.equal(l.tag, 'BUTTON');
+      assert.match(l.name, /^Carriles: elegir cuáles se ven/);
+      assert.ok(l.title, 'no tooltip');
+      assert.equal(l.popup, 'dialog');
+      assert.equal(l.expanded, 'false');
+      assert.equal(l.border, 'solid 1', `${cls}: no border`);
+      assert.equal(l.cursor, 'pointer');
+      assert.ok(l.icon, 'no arrow');
+      assert.ok(l.fits && !l.cut, `${screen.name} ${cls}: the button leaves its column or is cut`);
+    }
+    await p.evaluate(() => document.documentElement.classList.remove('be-reunion', 'be-letra-grande'));
+    await frames(p);
+    const b = p.locator('#carriles .carriles-boton');
+    if (screen.hasTouch) await b.tap(); else await b.click();
+    await frames(p);
+    let l = await look();
+    assert.ok(l.open, `${screen.name}: a ${screen.hasTouch ? 'tap' : 'click'} did not open the lane chooser`);
+    assert.equal(l.expanded, 'true');
+    // The dialog belongs to the «…» button too: it says it is open, whichever button opened it.
+    assert.equal(await p.evaluate(() => document.querySelector('#linea-menu-boton').getAttribute('aria-expanded')), 'true');
+    if (screen.hasTouch) await b.tap(); else await b.click();
+    await frames(p);
+    l = await look();
+    assert.ok(!l.open, `${screen.name}: a second press did not close it`);
+    assert.equal(l.expanded, 'false');
+    await b.focus();
+    await p.keyboard.press('Enter');
+    await frames(p);
+    l = await look();
+    assert.ok(l.open, `${screen.name}: Enter did not open the lane chooser`);
+    assert.equal(l.expanded, 'true');
+    await p.context().close();
+  }
 });
 
 test('430: a pinch that starts during a drag, and the ruler used with a finger, leave the strip as it was', async () => {

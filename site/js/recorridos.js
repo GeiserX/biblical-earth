@@ -118,7 +118,13 @@ function marcas() {
   }
 }
 
-/** Va a la parada i: cursor, mapa (su lugar resaltado y, si encuadrar, encuadrado), ficha y dirección. */
+/** Lo que encuadra la parada i: en la primera, todas las paradas del recorrido; en las demás, la parada con la de antes
+    y la de después, para que se vea de dónde viene y adónde va aunque el mapa sea bajo. */
+function encuadreParada(rc, i) {
+  const ks = i === 0 ? rc.paradas.map((_, k) => k) : [i - 1, i, i + 1];
+  return [...new Set(ks.flatMap((k) => (rc.paradas[k] ? lugaresParada(rc.paradas[k]) : [])))];
+}
+/** Va a la parada i: cursor, mapa (su lugar resaltado y, si encuadrar, encuadrado con sus vecinas), ficha y dirección. */
 function irA(i, { historia = true, encuadrar = true } = {}) {
   const rc = busca(R.id);
   if (!rc) return;
@@ -132,7 +138,7 @@ function irA(i, { historia = true, encuadrar = true } = {}) {
   const ls = lugaresParada(p);
   vistaSobreMapa();   // antes de encuadrar: el encuadre deja libre el sitio de esta tarjeta
   BE.mapa.resaltar(ls.length ? ls : null);
-  if (ls.length && encuadrar) BE.mapa.encuadrar(ls);
+  if (encuadrar) { const caja = encuadreParada(rc, i); if (caja.length) BE.mapa.encuadrar(caja); }
   BE.pintarPanel(true);
   marcas();
   BE.guardarHash();

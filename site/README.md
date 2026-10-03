@@ -57,6 +57,8 @@ El relieve de Jerusalén sale de teselas Terrarium al zoom 14 (unos 10 m por pí
 
 Al encuadrar una selección, el mapa no se acerca más de lo que aguanta el relieve más fino de esa zona (`topeRelieve` en `js/mapa.js`): zoom 14 en Jerusalén, 10 en la tierra de Israel, 8 en el Mediterráneo y 7,5 en el resto. Si ya estaba más cerca, se aleja hasta ese tope. Sin selección, un salto grande en el tiempo (una fecha escrita, un año buscado, un clic lejano en la pista) reencuadra a Pablo o, si los datos no lo sitúan, la época. Reproducir o arrastrar el cursor poco a poco no reencuadra, por muchos años que recorra.
 
+Lo encuadrado nunca queda bajo lo que tapa el mapa: la leyenda, «Mientras tanto», las tarjetas del recorrido guiado, «Ahora mismo», el mapa de situación, los botones de arriba a la derecha, los modos del mapa y, en el móvil, la fila del suceso, el botón «Leyenda» y la hoja inferior (`loQueTapa` y `rellenoEncuadre` en `js/mapa.js`; los rótulos usan la misma lista). Cada tarjeta se deja libre por su lado o por encima o debajo, y gana la manera que deja más grande lo encuadrado. Antes de medir se pintan la leyenda y «Mientras tanto» de lo nuevo; si el mapa aún no había cargado, al cargar se encuadra otra vez. Un recorrido abre con todas sus paradas a la vista, y cada parada siguiente se encuadra con la anterior y la siguiente. Con la línea subida a mano en una pantalla de 1440 × 900, el mapa mide 282 px de alto: lo encuadrado cabe entre las tarjetas, pero se ve de lejos.
+
 El kit dibuja en proyección equirrectangular. Aquí las imágenes están reproyectadas a Web Mercator (EPSG:3857) para que MapLibre las ponga como `image source` con las esquinas exactas. La reproyección es un remuestreo por filas, porque en las dos proyecciones la longitud es lineal en x:
 
 ```python
@@ -130,7 +132,7 @@ Los demás parámetros solo aparecen cuando no valen lo de siempre:
 | `secular` | `0` | Oculta las fechas seculares |
 | `pausa` | `0` | No se para en los sucesos al reproducir |
 | `regla`, `bucle` | `a~b` | Regla entre dos fechas; tramo que se repite al reproducir |
-| `linea` | `normal`, `grande` | Alto de la línea de tiempo cuando no es el de siempre: en la pantalla ancha de 840 px de alto o más abre alta y `normal` la baja; en el móvil o en una pantalla más baja `grande` la sube |
+| `linea` | `normal`, `grande` | Alto de la línea de tiempo cuando no es el de siempre: en la pantalla ancha de 1000 px de alto o más abre alta y `normal` la baja; en el móvil o en una pantalla más baja `grande` la sube |
 | `meses` | `ambos`, `nuestros`, `hebreos` | Filas de meses de la línea a escala de meses y de días, y qué fecha va primero arriba. Sin él, ambos |
 | `ahora`, `sinc` | `1`; `<lugar>~<periodo>` | Vista «Ahora mismo»; sincronía de un lugar en un periodo. Cada una tiene su entrada de historial |
 | `grafo`, `gvista`, `gtodo` | ids unidos por `.`; una persona va por su id y lo demás con su tipo (`pablo.lugar:listra.evento:concilio-de-jerusalen-49`); `lista` o `grafo`; `1` | Grafo (el último es el centro; cualquier selección puede serlo, y con el grafo abierto lo seleccionado pasa al centro), su vista y si enseña todas las fechas |
@@ -157,7 +159,7 @@ Los demás parámetros solo aparecen cuando no valen lo de siempre:
 
 Las marcas de la línea son una sola parada del tabulador. La rueda sobre la regla o los carriles cambia la escala en el puntero, de milenios a días, igual que Ctrl o ⌘ con la rueda y la pinza del trackpad; con Mayúsculas, o con un gesto horizontal en el trackpad, desplaza la vista. Cuando la línea es alta, los carriles se recorren de arriba abajo con la rueda sobre sus nombres, con la barra de desplazamiento o arrastrando en vertical. Arrastrar los carriles de lado mueve el tiempo; pulsar o arrastrar en la regla mueve el cursor.
 
-El carril «Viajes de Pablo» enseña solo los viajes de Pablo: un tramo por viaje y, debajo, sus paradas. Las demás personas no tienen carril propio hasta que se eligen o se fijan desde el menú de la línea. Entonces sale uno con su nombre (la persona elegida, justo antes de «Viajes de Pablo»; la fijada, arriba). Si la persona viaja, su carril lleva sus viajes igual que el de Pablo, un tramo por viaje en su color del mapa y sus paradas debajo, y después, en filas propias, los sucesos que la sitúan y dónde vivió. Pulsar una marca de ese carril no lo quita. Un viaje que se repetía cada año dice «↻ cada año» tras su nombre. Cuando un nombre de carril no cabe en una línea (en el móvil, con el carril fijado o con «Letra grande»), va en las líneas que necesite (hasta cuatro en el móvil con «Letra grande») y el carril crece hasta él, para no cortarse.
+El carril «Viajes de Pablo» enseña solo los viajes de Pablo: un tramo por viaje y, debajo, sus paradas. Las demás personas no tienen carril propio hasta que se eligen o se fijan desde el menú de la línea. Entonces sale uno con su nombre (la persona elegida, justo antes de «Viajes de Pablo»; la fijada, arriba). Si la persona viaja, su carril lleva sus viajes igual que el de Pablo, un tramo por viaje en su color del mapa y sus paradas debajo, y después, en filas propias, los sucesos que la sitúan y dónde vivió. Pulsar una marca de ese carril no lo quita. Con algo elegido, mientras su marca se vea, las demás marcas se atenúan sin perder su forma ni su color: las barras, lavadas hacia el fondo al 45 % y con su nombre en tinta; los puntos, al 60 %, así que los casi negros quedan grises. Sin nada elegido, todas tienen su color entero. Un viaje que se repetía cada año dice «↻ cada año» tras su nombre. Cuando un nombre de carril no cabe en una línea (en el móvil, con el carril fijado o con «Letra grande»), va en las líneas que necesite (hasta cuatro en el móvil con «Letra grande») y el carril crece hasta él, para no cortarse.
 
 ## Ficheros
 
@@ -231,7 +233,7 @@ BE.tipo('lugar', {
 | `BE.duenoViaje(v)`, `BE.nombreDueno(v)` | Quién hace un viaje: el id de su persona, `grupo:<id del viaje>` si es de un grupo sin ficha, o `'pablo'`; y su nombre |
 | `BE.acompanantes(v, orden)` | Los ids de los acompañantes de un viaje; con `orden`, solo los que van en esa parada |
 | `BE.mapa.resaltar(ids)` | Resalta esos lugares en el mapa por encima de la selección. `resaltar(null)` vuelve a la selección |
-| `BE.mapa.encuadrar(ids)` | Encuadra el mapa en esos lugares, descontando la hoja inferior en el móvil |
+| `BE.mapa.encuadrar(ids)` | Encuadra el mapa en esos lugares, fuera de las tarjetas del mapa y de la hoja inferior en el móvil |
 | `BE.pintores` | Lista de funciones que el bucle de pintado llama en cada fotograma, después de las suyas, con las marcas de lo que cambió (`{ mapa, etiquetas, panel, linea, cursor }`) |
 | `BE.inicios` | Funciones que se llaman una vez con los datos ya cargados, antes de leer la dirección |
 | `BE.parametros` | Parámetros extra de la dirección: `{ nombre, escribir() → texto o null, leer(texto, inicial) }` |
@@ -246,7 +248,7 @@ BE.tipo('lugar', {
 
 ### Marcos que cambian de tamaño
 
-Dos separadores (`base.js`, `iniciarMarcos`): `#sep-panel` entre el mapa y la ficha cambia `--panel-w`, y `#sep-linea` entre el mapa y la línea cambia `--timeline-h`. Se arrastran, se mueven con las flechas (20 px; 80 con Mayúsculas; Inicio y Fin, el mínimo y el máximo) y vuelven a su tamaño con doble clic o Intro. En el móvil el asa de la hoja cambia su alto (`--hoja-h`) y, pulsada, la pliega. Los tamaños se guardan en la sesión, en `biblical-atlas:marco:panel`, `:linea` y `:hoja`, y se recortan a lo que cabe al cambiar la ventana. En la pantalla ancha la línea abre alta (`min(62vh, 600px)`) si la ventana mide 840 px de alto o más, para que al mapa le queden unos 260 px; en una pantalla más baja abre con su alto normal y la T, el botón o el separador la suben. Con el grafo o la conexión abiertos, la línea alta de inicio les deja su sitio; pedida con la T, se ve alta también con ellos. Un alto arrastrado en esta sesión gana al recargar.
+Dos separadores (`base.js`, `iniciarMarcos`): `#sep-panel` entre el mapa y la ficha cambia `--panel-w`, y `#sep-linea` entre el mapa y la línea cambia `--timeline-h`. Se arrastran, se mueven con las flechas (20 px; 80 con Mayúsculas; Inicio y Fin, el mínimo y el máximo) y vuelven a su tamaño con doble clic o Intro. En el móvil el asa de la hoja cambia su alto (`--hoja-h`) y, pulsada, la pliega. Los tamaños se guardan en la sesión, en `biblical-atlas:marco:panel`, `:linea` y `:hoja`, y se recortan a lo que cabe al cambiar la ventana. En la pantalla ancha la línea abre alta (`min(62vh, 600px)`) si la ventana mide 1000 px de alto o más, para que al mapa le queden unos 400 px; en una pantalla más baja abre con su alto normal y la T, el botón o el separador la suben. Con el grafo o la conexión abiertos, la línea alta de inicio les deja su sitio; pedida con la T, se ve alta también con ellos. Un alto arrastrado en esta sesión gana al recargar.
 
 ### Móvil, tableta y dedo
 

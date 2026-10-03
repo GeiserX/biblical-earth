@@ -57,8 +57,13 @@
 
 /* Carriles */
 .carriles-eje { height: 26px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 6px 0 12px; }
-.carriles-boton { white-space: nowrap; border: 0; background: none; padding: 2px 6px; margin-left: -6px; border-radius: var(--r-sm); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); cursor: pointer; }
-.carriles-boton:hover { background: var(--paper-2); color: var(--ink); }
+/* «Carriles» es un botón: borde de píldora y flecha, como «Sobre las fechas» y los botones de la barra. */
+.carriles-boton { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0; white-space: nowrap; border: 1px solid var(--line-2); background: var(--surface); padding: 1px 4px 1px 8px; margin-left: -6px; border-radius: var(--r-pill); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); cursor: pointer; }
+.carriles-boton > span { overflow: hidden; text-overflow: ellipsis; }
+.carriles-boton .be-i { flex: none; width: 14px; height: 14px; }
+.carriles-boton:hover { background: var(--paper-2); border-color: var(--ink-3); color: var(--ink); }
+.carriles-boton:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.carriles-boton[aria-expanded="true"] { background: var(--gold-soft); border-color: var(--gold-line, var(--line-2)); color: var(--gold-ink, var(--ink)); }
 .carriles-boton b { color: var(--accent); font-weight: 700; }
 .carril-rotulo .be-lane-label { font-size: var(--fs-sm); position: relative; overflow: hidden; }
 .carril-rotulo .be-lane-label > span:not(.edad):not(.be-tier) { overflow: hidden; text-overflow: ellipsis; }
@@ -212,13 +217,19 @@
 .m[aria-pressed="true"] { z-index: 2; }
 .m[aria-pressed="true"]::after { content: ""; position: absolute; inset: 1px -3px; border: 2px solid var(--ink); border-radius: 5px; background: var(--gold-soft); z-index: -1; }
 .m[aria-pressed="true"] .m-nombre .t { text-decoration: underline 2px; text-underline-offset: 3px; background: transparent; }
-/* Con algo elegido (be-64b.1): lo que no tiene que ver pasa a gris y hueco, pero se sigue leyendo (texto a 4,5:1, borde a
-   3:1); lo que tiene que ver conserva su color y lleva un anillo. Si la marca elegida sale entera de la vista, o nada de
-   lo que se ve tiene que ver, no se atenúa nada (sin-foco, linea.js). Ningún estado cambia el ancho de un nombre: el
-   sitio de cada nombre se midió con su letra de siempre. */
-.linea-filas:not(.sin-foco) .m.atenuado :is(.m-barra, .m-punto) { background: var(--surface-2) !important; border: 1px solid var(--ink-3) !important; }
-.linea-filas:not(.sin-foco) .m.atenuado .m-ventana { color: var(--ink-3) !important; }
+/* Con algo elegido (be-64b.1): lo que no tiene que ver conserva su forma y su color, lavado hacia el fondo (--c es su
+   color, linea.js): una barra al 45 %, más clara pero del mismo color, con su nombre en tinta (4,8:1 o más en los dos
+   temas); un punto al 60 %, con su círculo entero, así que el que era casi negro queda gris. Lo que tiene que ver
+   conserva su color y lleva un anillo. Si la marca elegida sale entera de la vista, o nada de lo que se ve tiene que
+   ver, no se atenúa nada (sin-foco, linea.js). Ningún estado cambia el ancho de un nombre: el sitio de cada nombre se
+   midió con su letra de siempre. */
+.linea-filas:not(.sin-foco) .m.atenuado:not(.m--secular) .m-barra { background: color-mix(in srgb, var(--c) 45%, var(--surface)) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 70%, var(--surface)); }
+.linea-filas:not(.sin-foco) .m.atenuado .m-punto { background: color-mix(in srgb, var(--c) 60%, var(--surface)) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 80%, var(--surface)); }
+.linea-filas:not(.sin-foco) .m.atenuado.m--hueca :is(.m-barra, .m-punto) { background: var(--surface) !important; border-color: color-mix(in srgb, var(--c) 60%, var(--surface)) !important; box-shadow: none; }
+.linea-filas:not(.sin-foco) .m.atenuado.m--secular .m-barra { border-color: color-mix(in srgb, var(--secular) 50%, var(--surface)); }
+.linea-filas:not(.sin-foco) .m.atenuado .m-ventana { color: color-mix(in srgb, var(--c) 60%, var(--surface)) !important; }
 .linea-filas:not(.sin-foco) .m.atenuado .m-nombre { color: var(--ink-3) !important; }
+.linea-filas:not(.sin-foco) .m.atenuado .m-nombre.en-barra { color: var(--ink) !important; }
 .m.resaltado :is(.m-barra, .m-punto) { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 3px var(--gold); }
 @media (pointer: coarse) {
   .linea-pista { height: 44px; }
@@ -359,7 +370,7 @@
   .carril-rotulo .be-lane-label { padding: 0 6px 0 10px; font-size: var(--fs-xs); gap: 5px; }
   .carril-pin { display: none; }
   .carriles-eje { padding: 0 4px 0 10px; }
-  .carriles-boton { font-size: 9.5px; letter-spacing: 0; }
+  .carriles-boton { font-size: 9.5px; letter-spacing: 0; padding: 1px 2px 1px 6px; margin-left: -4px; }
   .nivel-carril { display: none; }
   .edad { display: none; }
   .vista-ahora { left: 8px; right: 8px; top: 48px; width: auto; max-height: 45%; }
